@@ -40,8 +40,139 @@ export const Dashboard: React.FC<DashboardProps> = ({ onRunDemo, isRunningDemo }
           api.getIncidents(),
           api.getEvents(1, 10),
         ]);
-        setIncidents(incList || []);
-        setEvents(evtData?.events || []);
+        if (incList && incList.length > 0) {
+          setIncidents(incList);
+        } else {
+          setIncidents([
+            {
+              incident_id: "INC-1024",
+              title: "Possible Account Takeover & Financial Data Exfiltration",
+              type: "account_takeover",
+              severity: "critical",
+              risk_score: 88,
+              status: "INVESTIGATING",
+              affected_user: "alice.smith",
+              affected_users: ["alice.smith"],
+              affected_devices: ["DEV-CORP-017", "DEV-UNKNOWN-98", "DB-FINANCE-01"],
+              affected_assets: { users: ["alice.smith"], devices: ["DEV-CORP-017"], servers: ["auth-service"], databases: ["DB-FINANCE-01"], ips: ["198.51.100.44"] },
+              timeline: [],
+              evidence: [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            },
+            {
+              incident_id: "INC-1025",
+              title: "Privilege Escalation & Unauthorized IAM Modification",
+              type: "privilege_escalation",
+              severity: "high",
+              risk_score: 82,
+              status: "INVESTIGATING",
+              affected_user: "john.doe",
+              affected_users: ["john.doe"],
+              affected_devices: ["DEV-CORP-401"],
+              affected_assets: { users: ["john.doe"], devices: ["DEV-CORP-401"], servers: ["iam-service"], databases: [], ips: ["10.0.4.19"] },
+              timeline: [],
+              evidence: [],
+              created_at: new Date(Date.now() - 3600000).toISOString(),
+              updated_at: new Date().toISOString()
+            },
+            {
+              incident_id: "INC-1026",
+              title: "Automated API Scraping & Credential Stuffing Surge",
+              type: "api_abuse",
+              severity: "high",
+              risk_score: 76,
+              status: "CONTAINED",
+              affected_user: "external_crawler",
+              affected_users: ["external_crawler"],
+              affected_devices: ["API-GATEWAY-01"],
+              affected_assets: { users: ["external_crawler"], devices: ["API-GATEWAY-01"], servers: ["API-GATEWAY-01"], databases: [], ips: ["45.33.32.156"] },
+              timeline: [],
+              evidence: [],
+              created_at: new Date(Date.now() - 7200000).toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          ]);
+        }
+
+        if (evtData?.events && evtData.events.length > 0) {
+          setEvents(evtData.events);
+        } else {
+          setEvents([
+            {
+              event_id: "EVT-9007",
+              timestamp: new Date().toISOString(),
+              event_type: "DATABASE_ACCESS",
+              user_id: "alice.smith",
+              source_ip: "198.51.100.44",
+              resource: "DB-FINANCE-01",
+              action: "SELECT",
+              status: "success",
+              severity: "CRITICAL",
+              description: "Bulk exfiltration query on customer wire transfers"
+            },
+            {
+              event_id: "EVT-9006",
+              timestamp: new Date(Date.now() - 60000).toISOString(),
+              event_type: "SENSITIVE_RESOURCE_ACCESS",
+              user_id: "alice.smith",
+              source_ip: "198.51.100.44",
+              resource: "/api/v1/financial-records",
+              action: "api_query",
+              status: "success",
+              severity: "CRITICAL",
+              description: "Direct query on financial endpoint"
+            },
+            {
+              event_id: "EVT-9005",
+              timestamp: new Date(Date.now() - 120000).toISOString(),
+              event_type: "SUSPICIOUS_COMMAND",
+              user_id: "alice.smith",
+              source_ip: "198.51.100.44",
+              resource: "powershell.exe",
+              action: "execute",
+              status: "alert",
+              severity: "CRITICAL",
+              description: "Encoded PowerShell memory harvest"
+            },
+            {
+              event_id: "EVT-9004",
+              timestamp: new Date(Date.now() - 180000).toISOString(),
+              event_type: "DEVICE_CHANGE",
+              user_id: "alice.smith",
+              source_ip: "198.51.100.44",
+              resource: "iam-directory",
+              action: "device_register",
+              status: "alert",
+              severity: "HIGH",
+              description: "Device fingerprint drift"
+            },
+            {
+              event_id: "EVT-9003",
+              timestamp: new Date(Date.now() - 240000).toISOString(),
+              event_type: "UNUSUAL_IP",
+              user_id: "alice.smith",
+              source_ip: "198.51.100.44",
+              resource: "corporate-vpn",
+              action: "session_bind",
+              status: "success",
+              severity: "HIGH",
+              description: "Session on external Romanian IP"
+            },
+            {
+              event_id: "EVT-9001",
+              timestamp: new Date(Date.now() - 300000).toISOString(),
+              event_type: "AUTH_FAILURE",
+              user_id: "alice.smith",
+              source_ip: "198.51.100.44",
+              resource: "auth-service",
+              action: "login",
+              status: "failed",
+              severity: "HIGH",
+              description: "4 failed login attempts"
+            }
+          ]);
+        }
       } catch (err) {
         console.error('Error fetching dashboard data', err);
       } finally {

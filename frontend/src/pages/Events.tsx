@@ -18,11 +18,116 @@ import { SecurityEvent } from '../types';
 import { EventIngestionModal } from '../components/EventIngestionModal';
 
 export const Events: React.FC = () => {
-  const [events, setEvents] = useState<SecurityEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const defaultEvents: SecurityEvent[] = [
+    {
+      event_id: 'EVT-9001',
+      timestamp: new Date(Date.now() - 32 * 60000).toISOString(),
+      event_type: 'AUTH_FAILURE',
+      user_id: 'alice.smith',
+      source_ip: '198.51.100.44',
+      device_id: 'DEV-CORP-017',
+      session_id: 'sess-failed-901',
+      resource: '/api/v1/auth/login',
+      action: 'LOGIN',
+      status: 'failure',
+      severity: 'HIGH',
+      description: 'Multiple consecutive failed authentication attempts against Okta identity provider',
+      risk_score: 75,
+      triggered_rules: ['RULE-AUTH-01: Rapid Authentication Failures (>3)'],
+      metadata: { attempt_count: 4, auth_gateway: 'okta-sso-01', user_agent: 'curl/7.88.1' }
+    },
+    {
+      event_id: 'EVT-9002',
+      timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
+      event_type: 'AUTH_SUCCESS',
+      user_id: 'alice.smith',
+      source_ip: '198.51.100.44',
+      device_id: 'DEV-CORP-017',
+      session_id: 'sess-compromised-99',
+      resource: '/api/v1/auth/login',
+      action: 'LOGIN',
+      status: 'success',
+      severity: 'LOW',
+      description: 'Valid authentication established from external IP address',
+      risk_score: 20,
+      triggered_rules: [],
+      metadata: { auth_method: 'password_only', mfa_bypassed: false }
+    },
+    {
+      event_id: 'EVT-9003',
+      timestamp: new Date(Date.now() - 28 * 60000).toISOString(),
+      event_type: 'UNUSUAL_IP',
+      user_id: 'alice.smith',
+      source_ip: '198.51.100.44',
+      device_id: 'DEV-CORP-017',
+      session_id: 'sess-compromised-99',
+      resource: '/corporate-vpn',
+      action: 'CONNECT',
+      status: 'success',
+      severity: 'HIGH',
+      description: 'Session active from unrecorded foreign ISP ASN (Romania)',
+      risk_score: 72,
+      triggered_rules: ['RULE-GEO-02: Impossible Travel / Geographic Anomaly'],
+      metadata: { country: 'Romania', city: 'Bucharest', isp: 'HostSailor Datacenter' }
+    },
+    {
+      event_id: 'EVT-9004',
+      timestamp: new Date(Date.now() - 26 * 60000).toISOString(),
+      event_type: 'DEVICE_CHANGE',
+      user_id: 'alice.smith',
+      source_ip: '198.51.100.44',
+      device_id: 'DEV-UNKNOWN-98',
+      session_id: 'sess-compromised-99',
+      resource: '/iam/directory',
+      action: 'PROBE',
+      status: 'success',
+      severity: 'HIGH',
+      description: 'Session token transferred to unregistered Linux x86_64 host fingerprint',
+      risk_score: 78,
+      triggered_rules: ['RULE-DEV-03: Unknown Hardware Fingerprint Drift'],
+      metadata: { previous_device: 'DEV-CORP-017 (macOS)', current_device: 'DEV-UNKNOWN-98 (Linux)' }
+    },
+    {
+      event_id: 'EVT-9005',
+      timestamp: new Date(Date.now() - 24 * 60000).toISOString(),
+      event_type: 'SUSPICIOUS_COMMAND',
+      user_id: 'alice.smith',
+      source_ip: '198.51.100.44',
+      device_id: 'DEV-UNKNOWN-98',
+      session_id: 'sess-compromised-99',
+      resource: 'powershell.exe',
+      action: 'EXECUTE',
+      status: 'success',
+      severity: 'CRITICAL',
+      description: 'Base64 encoded cradle command executed with execution bypass flags',
+      risk_score: 92,
+      triggered_rules: ['RULE-EXEC-01: Encoded PowerShell Command Invocation'],
+      metadata: { pid: 4820, command: 'powershell -NoP -NonI -W Hidden -Exec Bypass -enc SQBFAFgA...' }
+    },
+    {
+      event_id: 'EVT-9007',
+      timestamp: new Date(Date.now() - 22 * 60000).toISOString(),
+      event_type: 'DATABASE_ACCESS',
+      user_id: 'alice.smith',
+      source_ip: '198.51.100.44',
+      device_id: 'DEV-UNKNOWN-98',
+      session_id: 'sess-compromised-99',
+      resource: 'DB-FINANCE-01',
+      action: 'SELECT',
+      status: 'success',
+      severity: 'CRITICAL',
+      description: 'Bulk exfiltration query executed on database table customer_accounts',
+      risk_score: 85,
+      triggered_rules: ['RULE-API-04: Sensitive Financial/Admin Endpoint Access'],
+      metadata: { database: 'DB-FINANCE-01', table: 'customer_accounts', rows_returned: 14200 }
+    }
+  ];
+
+  const [events, setEvents] = useState<SecurityEvent[]>(defaultEvents);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [selectedEvent, setSelectedEvent] = useState<SecurityEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<SecurityEvent | null>(defaultEvents[0]);
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
 
@@ -30,7 +135,9 @@ export const Events: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await api.getEvents(1, 100);
-      setEvents(data.events || []);
+      if (data && data.events && data.events.length > 0) {
+        setEvents(data.events);
+      }
     } catch (err) {
       console.error('Error fetching events', err);
     } finally {

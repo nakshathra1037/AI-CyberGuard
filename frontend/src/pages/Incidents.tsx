@@ -15,8 +15,77 @@ import { api } from '../services/api';
 import { SecurityIncident } from '../types';
 
 export const Incidents: React.FC = () => {
-  const [incidents, setIncidents] = useState<SecurityIncident[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const defaultIncidents: SecurityIncident[] = [
+    {
+      incident_id: 'INC-1024',
+      title: 'Possible Account Takeover & Financial Data Exfiltration',
+      type: 'account_takeover',
+      severity: 'critical',
+      risk_score: 88,
+      status: 'investigating',
+      affected_user: 'alice.smith',
+      affected_users: ['alice.smith'],
+      affected_devices: ['DEV-CORP-017', 'DEV-UNKNOWN-98', 'DB-FINANCE-01'],
+      affected_assets: {
+        users: ['alice.smith'],
+        devices: ['DEV-CORP-017', 'DEV-UNKNOWN-98'],
+        servers: ['auth-service', 'corporate-vpn'],
+        databases: ['DB-FINANCE-01'],
+        ips: ['198.51.100.44']
+      },
+      timeline: [],
+      evidence: [],
+      created_at: new Date(Date.now() - 35 * 60000).toISOString(),
+      updated_at: new Date(Date.now() - 30 * 60000).toISOString()
+    },
+    {
+      incident_id: 'INC-1025',
+      title: 'Privilege Escalation & Unauthorized IAM Modification',
+      type: 'privilege_escalation',
+      severity: 'high',
+      risk_score: 82,
+      status: 'investigating',
+      affected_user: 'john.doe',
+      affected_users: ['john.doe'],
+      affected_devices: ['DEV-CORP-401'],
+      affected_assets: {
+        users: ['john.doe'],
+        devices: ['DEV-CORP-401'],
+        servers: ['iam-service'],
+        databases: [],
+        ips: ['10.0.4.19']
+      },
+      timeline: [],
+      evidence: [],
+      created_at: new Date(Date.now() - 110 * 60000).toISOString(),
+      updated_at: new Date(Date.now() - 105 * 60000).toISOString()
+    },
+    {
+      incident_id: 'INC-1026',
+      title: 'Automated API Scraping & Credential Stuffing Surge',
+      type: 'api_abuse',
+      severity: 'high',
+      risk_score: 76,
+      status: 'contained',
+      affected_user: 'external_crawler',
+      affected_users: ['external_crawler'],
+      affected_devices: ['API-GATEWAY-01'],
+      affected_assets: {
+        users: ['external_crawler'],
+        devices: ['API-GATEWAY-01'],
+        servers: ['API-GATEWAY-01'],
+        databases: [],
+        ips: ['45.33.32.156']
+      },
+      timeline: [],
+      evidence: [],
+      created_at: new Date(Date.now() - 240 * 60000).toISOString(),
+      updated_at: new Date(Date.now() - 225 * 60000).toISOString()
+    }
+  ];
+
+  const [incidents, setIncidents] = useState<SecurityIncident[]>(defaultIncidents);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -25,7 +94,9 @@ export const Incidents: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await api.getIncidents();
-      setIncidents(data || []);
+      if (data && data.length > 0) {
+        setIncidents(data);
+      }
     } catch (err) {
       console.error('Error fetching incidents', err);
     } finally {
