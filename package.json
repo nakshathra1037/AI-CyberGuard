@@ -1,0 +1,12 @@
+{
+  "name": "ai-cyberguard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI CyberGuard - Autonomous AI Cybersecurity & Incident Investigation Platform",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "backend": "python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "test": "python -m unittest discover -s tests -p \"test_*.py\""
+  }
+}

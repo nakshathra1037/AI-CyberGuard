@@ -1,0 +1,9 @@
+{
+  "name": "ai-cyberguard-backend",
+  "version": "1.0.0",
+  "description": "AI CyberGuard FastAPI Python Backend Helper",
+  "scripts": {
+    "dev": "python -c \"import sys, os; sys.path.insert(0, os.path.abspath('..')); import uvicorn; uvicorn.run('backend.app.main:app', host='127.0.0.1', port=8000, reload=True)\"",
+    "start": "python -c \"import sys, os; sys.path.insert(0, os.path.abspath('..')); import uvicorn; uvicorn.run('backend.app.main:app', host='127.0.0.1', port=8000)\""
+  }
+}
