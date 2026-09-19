@@ -56,3 +56,25 @@ class EventCreate(BaseModel):
     severity: Optional[str] = "low"
     description: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class BulkEventIngestRequest(BaseModel):
+    events: List[EventCreate]
+    correlate_immediately: bool = True
+
+
+class BulkIngestResponse(BaseModel):
+    total_received: int
+    total_ingested: int
+    suspicious_count: int
+    incidents_created: int
+    incident_ids: List[str] = Field(default_factory=list)
+    errors: List[str] = Field(default_factory=list)
+    message: str
+
+
+class SimulateInjectionRequest(BaseModel):
+    scenario: str  # e.g., "ransomware_staging", "password_spray", "data_exfiltration"
+    target_user: Optional[str] = "sarah"
+    target_device: Optional[str] = "PC-042"
+    correlate_immediately: bool = True

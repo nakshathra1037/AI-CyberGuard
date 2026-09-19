@@ -1,11 +1,16 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
+import json
 
-from backend.app.schemas.event import NormalizedEvent, EventCreate
+from backend.app.schemas.event import (
+    NormalizedEvent, EventCreate, BulkEventIngestRequest,
+    BulkIngestResponse, SimulateInjectionRequest
+)
 from backend.app.database import get_repository
 from backend.app.detection.risk_engine import risk_engine
+from backend.app.services.ingestion_service import ingestion_service
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -35,6 +40,66 @@ async def ingest_event(payload: EventCreate):
 
     saved = await repo.save_event(ev_dict)
     return saved
+
+
+@router.post("/bulk", response_model=BulkIngestResponse)
+async def bulk_ingest_events(payload: BulkEventIngestRequest):
+    """Ingests multiple structured events in one batch and optionally updates correlation."""
+    raw_list = [e.model_dump() for e in payload.events]
+    result = await ingestion_service.process_and_ingest_events(
+        raw_list,
+        correlate_immediately=payload.correlate_immediately
+    )
+    return result
+
+
+@router.post("/upload", response_model=BulkIngestResponse)
+async def upload_log_file(
+    file: UploadFile = File(...),
+    correlate: bool = Form(True)
+):
+    """
+    Accepts uploaded .json or .csv log files, validates records,
+    evaluates risk, and automatically correlates into incidents.
+    """
+    filename = file.filename.lower() if file.filename else "log.txt"
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8", errors="replace")
+
+        if filename.endswith(".csv"):
+            raw_events = ingestion_service.parse_csv_content(content_str)
+        else:
+            # Default to JSON parsing
+            raw_events = ingestion_service.parse_json_content(content_str)
+
+        if not raw_events:
+            raise HTTPException(status_code=400, detail="Log file contained 0 parsable events.")
+
+        result = await ingestion_service.process_and_ingest_events(
+            raw_events,
+            correlate_immediately=correlate
+        )
+        return result
+    except json.JSONDecodeError as jde:
+        raise HTTPException(status_code=400, detail=f"Malformed JSON in uploaded file: {str(jde)}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process log file: {str(e)}")
+
+
+@router.post("/simulate-injection", response_model=BulkIngestResponse)
+async def inject_simulated_scenario(payload: SimulateInjectionRequest):
+    """Injects a pre-configured synthetic multi-stage attack scenario for live testing."""
+    synthetic_events = ingestion_service.generate_simulated_scenario_events(
+        scenario=payload.scenario,
+        user=payload.target_user or "sarah",
+        device=payload.target_device or "PC-042"
+    )
+    result = await ingestion_service.process_and_ingest_events(
+        synthetic_events,
+        correlate_immediately=payload.correlate_immediately
+    )
+    return result
 
 
 @router.get("/{event_id}", response_model=NormalizedEvent)

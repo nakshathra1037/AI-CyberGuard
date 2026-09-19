@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   Terminal, Search, Filter, RefreshCw, Play,
-  ShieldAlert, CheckCircle2, ChevronDown, ChevronUp, Sparkles
+  ShieldAlert, CheckCircle2, ChevronDown, ChevronUp, Sparkles, Upload
 } from 'lucide-react';
 import { api } from '../services/api';
 import { NormalizedEvent } from '../types';
+import { LogUploaderModal } from '../components/LogUploaderModal';
 
 export const Events: React.FC = () => {
   const [events, setEvents] = useState<NormalizedEvent[]>([]);
@@ -12,6 +13,7 @@ export const Events: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
 
   // Custom analyzer state
   const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
@@ -85,6 +87,14 @@ export const Events: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsUploaderOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 text-black text-xs font-bold hover:from-cyan-300 hover:to-blue-400 transition-all shadow active:scale-95"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Upload Logs / Inject Attack</span>
+          </button>
+
+          <button
             onClick={() => setIsAnalyzerOpen(!isAnalyzerOpen)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyber-900 hover:bg-cyber-800 text-cyan-300 border border-cyan-500/30 text-xs font-medium"
           >
@@ -102,6 +112,13 @@ export const Events: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Log Uploader & Scenario Injector Modal */}
+      <LogUploaderModal
+        isOpen={isUploaderOpen}
+        onClose={() => setIsUploaderOpen(false)}
+        onEventsIngested={fetchEvents}
+      />
 
       {/* Analyzer Sandbox Drawer */}
       {isAnalyzerOpen && (

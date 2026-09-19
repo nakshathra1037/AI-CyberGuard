@@ -203,3 +203,14 @@ export interface DemoResult {
   simulated_actions: SimulatedAction[];
   report: IncidentReport;
 }
+
+export interface BulkIngestResponse {
+  total_received: number;
+  total_ingested: number;
+  suspicious_count: number;
+  incidents_created: number;
+  incident_ids: string[];
+  errors: string[];
+  message: string;
+}
+

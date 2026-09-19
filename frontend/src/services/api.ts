@@ -2,7 +2,7 @@ import {
   NormalizedEvent, Incident, TimelineItem, EvidenceItem,
   AttackStory, ResponseRecommendation, SimulatedAction,
   AIResponse, IncidentReport, PatternItem, HourlyTrend,
-  IntelligenceStatistics, DemoResult
+  IntelligenceStatistics, DemoResult, BulkIngestResponse
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -47,6 +47,36 @@ export const api = {
     request<NormalizedEvent>('/api/events', {
       method: 'POST',
       body: JSON.stringify(eventData),
+    }),
+  uploadLogFile: (file: File, correlate: boolean = true): Promise<BulkIngestResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('correlate', String(correlate));
+    const url = `${API_BASE}/api/events/upload`;
+    return fetch(url, {
+      method: 'POST',
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        let errDetail = res.statusText;
+        try {
+          const errJson = await res.json();
+          errDetail = errJson.detail || errJson.message || JSON.stringify(errJson);
+        } catch {}
+        throw new Error(`Upload Error [${res.status}]: ${errDetail}`);
+      }
+      return res.json();
+    });
+  },
+  bulkIngestEvents: (events: Partial<NormalizedEvent>[], correlate_immediately: boolean = true) =>
+    request<BulkIngestResponse>('/api/events/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ events, correlate_immediately }),
+    }),
+  injectSimulatedScenario: (scenario: string, targetUser?: string, targetDevice?: string, correlate_immediately: boolean = true) =>
+    request<BulkIngestResponse>('/api/events/simulate-injection', {
+      method: 'POST',
+      body: JSON.stringify({ scenario, target_user: targetUser, target_device: targetDevice, correlate_immediately }),
     }),
 
   // Detection

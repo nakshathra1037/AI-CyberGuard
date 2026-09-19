@@ -36,15 +36,15 @@ class RiskEngine:
 
     def analyze_event(self, event: Dict[str, Any]) -> DetectionResult:
         """Inspects an individual event and identifies suspicious behavior."""
-        event_id = event.get("event_id", "UNKNOWN")
-        event_type = event.get("event_type", "").lower()
-        action = event.get("action", "").lower()
-        description = event.get("description", "").lower()
-        metadata = event.get("metadata", {}) or {}
-        user = event.get("user", "")
-        device = event.get("device", "")
-        src_ip = event.get("source_ip", "")
-        dest = event.get("destination", "")
+        event_id = event.get("event_id") or "UNKNOWN"
+        event_type = (event.get("event_type") or "").lower()
+        action = (event.get("action") or "").lower()
+        description = (event.get("description") or "").lower()
+        metadata = event.get("metadata") or {}
+        user = event.get("user") or ""
+        device = event.get("device") or ""
+        src_ip = event.get("source_ip") or ""
+        dest = event.get("destination") or ""
 
         triggered_rules: List[TriggeredRule] = []
         reasons: List[str] = []
@@ -208,13 +208,14 @@ class RiskEngine:
                     all_reasons.extend(det.reasons)
                     all_indicators.extend(det.suspicious_indicators)
 
-            # Check individual stage presence
-            ev_type = ev.get("event_type", "").lower()
-            desc = ev.get("description", "").lower()
-            act = ev.get("action", "").lower()
-            meta = ev.get("metadata", {}) or {}
+            ev_type = (ev.get("event_type") or "").lower()
+            desc = (ev.get("description") or "").lower()
+            act = (ev.get("action") or "").lower()
+            meta = ev.get("metadata") or {}
+            src_ip = ev.get("source_ip") or ""
+            dest = ev.get("destination") or ""
 
-            if "unusual" in desc or "185.23" in ev.get("source_ip", ""):
+            if "unusual" in desc or "185.23" in src_ip:
                 has_unusual_login = True
             if "powershell" in desc or "powershell" in str(meta).lower():
                 has_powershell = True
@@ -224,7 +225,7 @@ class RiskEngine:
                 has_recon = True
             if ev_type == "lateral_movement" or "lateral" in desc:
                 has_lateral_movement = True
-            if "database" in desc or "db-01" in str(ev.get("destination", "")).lower():
+            if "database" in desc or "db-01" in str(dest).lower():
                 has_db_access = True
 
         # Base scoring calculation according to Section 8:
