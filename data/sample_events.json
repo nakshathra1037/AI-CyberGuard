@@ -1,0 +1,133 @@
+[
+  {
+    "event_id": "EVT-001",
+    "timestamp": "2026-09-19T09:02:00Z",
+    "event_type": "login",
+    "user": "alex",
+    "device": "PC-017",
+    "source_ip": "10.0.4.55",
+    "destination": "PC-017",
+    "action": "login",
+    "status": "success",
+    "severity": "low",
+    "description": "Standard corporate workstation login",
+    "metadata": {
+      "auth_method": "kerberos",
+      "workstation": "PC-017",
+      "domain": "CORP.LOCAL"
+    }
+  },
+  {
+    "event_id": "EVT-002",
+    "timestamp": "2026-09-19T09:12:00Z",
+    "event_type": "authentication",
+    "user": "alex",
+    "device": "PC-017",
+    "source_ip": "185.23.44.12",
+    "destination": "PC-017",
+    "action": "login",
+    "status": "success",
+    "severity": "medium",
+    "description": "Unusual login from external untrusted IP address",
+    "metadata": {
+      "geo_country": "Unknown/VPN",
+      "is_new_location": true,
+      "auth_protocol": "RDP",
+      "unusual_time": false
+    }
+  },
+  {
+    "event_id": "EVT-003",
+    "timestamp": "2026-09-19T09:13:00Z",
+    "event_type": "process_execution",
+    "user": "alex",
+    "device": "PC-017",
+    "source_ip": "185.23.44.12",
+    "destination": "PC-017",
+    "action": "process_spawn",
+    "status": "success",
+    "severity": "high",
+    "description": "Suspicious PowerShell execution with encoded command payload",
+    "metadata": {
+      "parent_process": "explorer.exe",
+      "process_name": "powershell.exe",
+      "command_line": "powershell.exe -NoP -NonI -W Hidden -Enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACk...",
+      "process_id": 4820
+    }
+  },
+  {
+    "event_id": "EVT-004",
+    "timestamp": "2026-09-19T09:14:00Z",
+    "event_type": "credential_access",
+    "user": "alex",
+    "device": "PC-017",
+    "source_ip": "185.23.44.12",
+    "destination": "PC-017",
+    "action": "memory_read",
+    "status": "success",
+    "severity": "high",
+    "description": "LSASS memory access indicating simulated credential dumping attempt",
+    "metadata": {
+      "target_process": "lsass.exe",
+      "access_rights": "0x1010",
+      "technique": "T1003.001",
+      "tool_signature": "mimikatz_dump_simulation"
+    }
+  },
+  {
+    "event_id": "EVT-005",
+    "timestamp": "2026-09-19T09:16:00Z",
+    "event_type": "network_activity",
+    "user": "alex",
+    "device": "PC-017",
+    "source_ip": "PC-017",
+    "destination": "FILESERVER-02",
+    "action": "network_scan",
+    "status": "success",
+    "severity": "medium",
+    "description": "Internal network reconnaissance and discovery targeting central file servers",
+    "metadata": {
+      "ports_probed": [445, 139, 3389],
+      "protocol": "SMB",
+      "query_type": "share_enumeration"
+    }
+  },
+  {
+    "event_id": "EVT-006",
+    "timestamp": "2026-09-19T09:18:00Z",
+    "event_type": "lateral_movement",
+    "user": "alex",
+    "device": "PC-017",
+    "source_ip": "PC-017",
+    "destination": "FILESERVER-02",
+    "action": "remote_service_creation",
+    "status": "success",
+    "severity": "critical",
+    "description": "Lateral movement connection established from PC-017 to FILESERVER-02 using stolen credentials",
+    "metadata": {
+      "target_host": "FILESERVER-02",
+      "service_name": "WinRM-RemoteExec",
+      "logon_type": "Network",
+      "elevated_token": true
+    }
+  },
+  {
+    "event_id": "EVT-007",
+    "timestamp": "2026-09-19T09:19:00Z",
+    "event_type": "file_access",
+    "user": "alex",
+    "device": "FILESERVER-02",
+    "source_ip": "FILESERVER-02",
+    "destination": "DB-01",
+    "action": "database_query",
+    "status": "success",
+    "severity": "critical",
+    "description": "Unauthorized access to sensitive production customer database DB-01 via administrative connection",
+    "metadata": {
+      "database_target": "DB-01",
+      "table_accessed": "customers_financial_records",
+      "records_queried": 15000,
+      "query_pattern": "SELECT * FROM clients WHERE balance > 0"
+    }
+  }
+]
