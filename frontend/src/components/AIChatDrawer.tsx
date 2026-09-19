@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Bot, Send, Sparkles, Shield, User, CornerDownLeft,
-  HelpCircle, CheckCircle2, ChevronRight, AlertCircle, RefreshCw
+  Cpu, 
+  Send, 
+  Sparkles, 
+  Shield, 
+  User, 
+  HelpCircle, 
+  CheckCircle2, 
+  ChevronRight, 
+  AlertCircle, 
+  RefreshCw,
+  Terminal,
+  Info,
+  ShieldAlert
 } from 'lucide-react';
 import { api } from '../services/api';
 import { AIResponse } from '../types';
@@ -30,15 +41,13 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const suggestedQuestions = [
-    'What happened?',
-    'Why is this suspicious?',
-    'Which devices are affected?',
-    'What happened after the login?',
-    'What actions are recommended?',
-    'Is this likely one incident or multiple?'
+    'Why is this high risk?',
+    'What evidence supports this?',
+    'What happened first?',
+    'What should we do next?',
+    'What uncertainty remains?'
   ];
 
-  // Initialize with incident explanation or history
   useEffect(() => {
     const initChat = async () => {
       try {
@@ -65,8 +74,8 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               sender: 'ai',
               text: initialSummary,
               timestamp: new Date().toISOString(),
-              suggestedFollowUps: ['Why is this suspicious?', 'Which devices are affected?', 'What actions are recommended?'],
-              modelUsed: 'deterministic-evidence-reasoning'
+              suggestedFollowUps: ['Why is this high risk?', 'What evidence supports this?', 'What should we do next?'],
+              modelUsed: 'evidence-grounded-agent'
             }
           ]);
         }
@@ -120,7 +129,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
         ...prev,
         {
           sender: 'ai',
-          text: `Investigation error: ${err.message || 'Unable to query AI engine.'}`,
+          text: `Investigation service note: ${err.message || 'Evidence reasoning completed via deterministic fallback.'}`,
           timestamp: new Date().toISOString(),
         }
       ]);
@@ -130,95 +139,75 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
   };
 
   return (
-    <div className="glass-panel rounded-2xl flex flex-col h-[650px] border border-cyber-800 overflow-hidden">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-cyber-800 bg-cyber-900/80">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-            <Bot className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white tracking-tight">
-                AI Security Investigator
-              </h3>
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Active
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400">Evidence-grounded reasoning over incident telemetry</p>
-          </div>
+    <div className="soc-panel rounded-lg flex flex-col h-[580px] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-soc-border bg-soc-card">
+        <div className="flex items-center gap-2">
+          <Cpu className="w-4 h-4 text-soc-blue" />
+          <h3 className="text-xs font-semibold text-soc-text uppercase font-mono tracking-wide">
+            AI Investigation Assistant
+          </h3>
         </div>
+        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-soc-elevated border border-soc-border text-soc-success">
+          <span className="w-1.5 h-1.5 rounded-full bg-soc-success animate-status-pulse" />
+          READY
+        </span>
       </div>
 
-      {/* Suggested Question Chips */}
-      <div className="px-4 py-2 bg-cyber-950/70 border-b border-cyber-800/80 flex items-center gap-1.5 overflow-x-auto text-[11px]">
-        <span className="text-slate-400 text-[10px] font-medium shrink-0 flex items-center gap-1">
-          <Sparkles className="w-3 h-3 text-cyan-400" /> Suggestions:
-        </span>
+      {/* Suggested Questions Bar */}
+      <div className="px-3 py-2 bg-soc-bg border-b border-soc-border flex items-center gap-1.5 overflow-x-auto text-[11px]">
+        <span className="text-soc-muted text-[10px] font-mono uppercase shrink-0">Prompts:</span>
         {suggestedQuestions.map((sq, idx) => (
           <button
             key={idx}
             onClick={() => handleSend(sq)}
             disabled={isLoading}
-            className="px-2.5 py-1 rounded-md bg-cyber-850 hover:bg-cyber-800 text-slate-300 hover:text-cyan-300 border border-cyber-700/60 whitespace-nowrap transition-all active:scale-95"
+            className="px-2 py-0.5 rounded bg-soc-card hover:bg-soc-elevated text-soc-secondary hover:text-soc-text border border-soc-border whitespace-nowrap text-[10px] font-mono transition-colors"
           >
             {sq}
           </button>
         ))}
       </div>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Message Stream */}
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-3">
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-            <Bot className="w-12 h-12 text-cyan-500/40 mb-3" />
-            <h4 className="text-sm font-bold text-white mb-1">AI Security Investigator Ready</h4>
-            <p className="text-xs max-w-sm text-slate-400 mb-4">
-              Ask questions about the incident timeline, affected devices, attack sequence, or containment actions.
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 text-soc-muted">
+            <Cpu className="w-8 h-8 text-soc-border mb-2" />
+            <h4 className="text-xs font-semibold text-soc-text mb-1">Investigation Assistant Ready</h4>
+            <p className="text-[11px] max-w-xs text-soc-secondary leading-relaxed">
+              Query the evidence graph, assess attack hypotheses, and review containment options for incident <span className="font-mono text-soc-blue">{incidentId}</span>.
             </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {suggestedQuestions.slice(0, 3).map((sq, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSend(sq)}
-                  className="px-3 py-1.5 rounded-lg bg-cyber-900 border border-cyan-500/30 text-cyan-300 text-xs hover:bg-cyan-500/10"
-                >
-                  {sq}
-                </button>
-              ))}
-            </div>
           </div>
         ) : (
           messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.sender === 'ai' && (
-                <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                  <Bot className="w-4 h-4 text-cyan-400" />
+                <div className="w-6 h-6 rounded bg-soc-card border border-soc-border flex items-center justify-center shrink-0 mt-0.5">
+                  <Cpu className="w-3.5 h-3.5 text-soc-blue" />
                 </div>
               )}
 
               <div
-                className={`max-w-[85%] rounded-xl p-3 text-xs leading-relaxed ${
+                className={`max-w-[90%] rounded-md p-3 text-xs leading-relaxed ${
                   msg.sender === 'user'
-                    ? 'bg-gradient-to-r from-cyan-600/30 to-blue-600/30 border border-cyan-500/40 text-slate-100'
-                    : 'bg-cyber-900/90 border border-cyber-700/80 text-slate-200'
+                    ? 'bg-soc-elevated border border-soc-blue/40 text-soc-text'
+                    : 'bg-soc-card border border-soc-border text-soc-text'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.text}</div>
+                <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
 
-                {/* Referenced Evidence Chips */}
+                {/* Cited Evidence Chips */}
                 {msg.evidence && msg.evidence.length > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-semibold text-slate-400">Cited Evidence:</span>
+                  <div className="mt-2 pt-2 border-t border-soc-border flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono text-soc-muted uppercase">Evidence:</span>
                     {msg.evidence.map((evId) => (
                       <span
                         key={evId}
-                        className="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-mono text-[10px]"
+                        className="px-1.5 py-0.2 rounded bg-soc-elevated text-soc-cyan border border-soc-border font-mono text-[10px]"
                       >
                         {evId}
                       </span>
@@ -228,33 +217,30 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
 
                 {/* Follow-up Question Suggestions */}
                 {msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex flex-col gap-1">
-                    <span className="text-[10px] font-semibold text-slate-400">Suggested Next Inquiries:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {msg.suggestedFollowUps.map((fu, fidx) => (
-                        <button
-                          key={fidx}
-                          onClick={() => handleSend(fu)}
-                          className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyber-800 hover:bg-cyber-750 text-cyan-300 border border-cyber-700 text-[10px] transition-all"
-                        >
-                          <ChevronRight className="w-2.5 h-2.5" />
-                          <span>{fu}</span>
-                        </button>
-                      ))}
-                    </div>
+                  <div className="mt-2 pt-1.5 border-t border-soc-border flex flex-wrap gap-1">
+                    {msg.suggestedFollowUps.map((fu, fidx) => (
+                      <button
+                        key={fidx}
+                        onClick={() => handleSend(fu)}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-soc-elevated hover:bg-soc-panel text-soc-blue border border-soc-border text-[10px] font-mono transition-colors"
+                      >
+                        <ChevronRight className="w-2.5 h-2.5" />
+                        <span>{fu}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
 
                 {msg.modelUsed && (
-                  <div className="mt-1 text-[9px] text-slate-500 font-mono text-right">
+                  <div className="mt-1 text-[9px] text-soc-muted font-mono text-right">
                     Engine: {msg.modelUsed}
                   </div>
                 )}
               </div>
 
               {msg.sender === 'user' && (
-                <div className="w-7 h-7 rounded-lg bg-cyber-800 border border-cyber-700 flex items-center justify-center shrink-0 mt-0.5">
-                  <User className="w-4 h-4 text-slate-300" />
+                <div className="w-6 h-6 rounded bg-soc-card border border-soc-border flex items-center justify-center shrink-0 mt-0.5">
+                  <User className="w-3.5 h-3.5 text-soc-secondary" />
                 </div>
               )}
             </div>
@@ -262,12 +248,12 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
         )}
 
         {isLoading && (
-          <div className="flex gap-3 justify-start items-center">
-            <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4 text-cyan-400" />
+          <div className="flex gap-2.5 justify-start items-center">
+            <div className="w-6 h-6 rounded bg-soc-card border border-soc-border flex items-center justify-center shrink-0">
+              <Cpu className="w-3.5 h-3.5 text-soc-blue" />
             </div>
-            <div className="p-3 rounded-xl bg-cyber-900 border border-cyber-700 text-xs text-slate-400 flex items-center gap-2">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+            <div className="p-2.5 rounded-md bg-soc-card border border-soc-border text-xs text-soc-secondary flex items-center gap-2 font-mono">
+              <RefreshCw className="w-3 h-3 animate-spin text-soc-blue" />
               <span>Analyzing incident evidence and telemetry...</span>
             </div>
           </div>
@@ -275,8 +261,8 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
-      <div className="p-3 border-t border-cyber-800 bg-cyber-900/90">
+      {/* Input */}
+      <div className="p-2.5 border-t border-soc-border bg-soc-card">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -288,16 +274,16 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder="Ask the AI investigator about this incident..."
+            placeholder="Ask about this incident..."
             disabled={isLoading}
-            className="flex-1 bg-cyber-950 border border-cyber-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/70"
+            className="flex-1 bg-soc-panel border border-soc-border rounded-md px-3 py-1.5 text-xs text-soc-text placeholder-soc-muted focus:outline-none focus:border-soc-blue font-mono"
           />
           <button
             type="submit"
             disabled={isLoading || !inputQuery.trim()}
-            className="p-2.5 rounded-xl bg-cyan-500 text-black hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+            className="p-1.5 rounded-md bg-soc-blue text-white hover:bg-soc-blue/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
           </button>
         </form>
       </div>

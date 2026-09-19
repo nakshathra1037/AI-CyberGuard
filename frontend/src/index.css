@@ -1,60 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #080B10;
+    color: #F1F5F9;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  code, pre {
-    font-family: 'JetBrains Mono', monospace;
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
   }
 }
 
-/* Glassmorphism & Cyber Gradients */
-.glass-panel {
-  background: rgba(17, 24, 39, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(56, 189, 248, 0.12);
+/* Custom SOC Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080B10;
+}
+::-webkit-scrollbar-thumb {
+  background: #202832;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2A3542;
 }
 
-.glass-panel-danger {
-  background: rgba(30, 15, 20, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+/* Restrained Materials & Panel Surfaces */
+.soc-panel {
+  background-color: #11161D;
+  border: 1px solid #202832;
+  border-radius: 8px;
 }
 
-.cyber-glow {
-  box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.35);
+.soc-panel-elevated {
+  background-color: #151B23;
+  border: 1px solid #2A3542;
+  border-radius: 8px;
 }
 
-.cyber-glow-danger {
-  box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.45);
+.soc-card {
+  background-color: #0D1117;
+  border: 1px solid #202832;
+  border-radius: 6px;
 }
 
-/* React Flow Customization */
-.react-flow__node {
-  border-radius: 12px;
-  font-family: 'Inter', sans-serif;
+/* Subtle Technical Grid Background */
+.soc-grid-bg {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(32, 40, 50, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(32, 40, 50, 0.25) 1px, transparent 1px);
 }
 
-.react-flow__handle {
-  background: #06b6d4 !important;
-  width: 8px !important;
-  height: 8px !important;
+/* React Flow Canvas Overrides */
+.react-flow__renderer {
+  background-color: #080B10 !important;
 }
 
 .react-flow__edge-path {
-  stroke: #38bdf8 !important;
-  stroke-width: 2.5px !important;
+  stroke: #2A3542 !important;
+  stroke-width: 1.5px !important;
 }
 
-/* Pulse animation */
-@keyframes subtle-pulse {
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #4F8CFF !important;
+  stroke-width: 2px !important;
+}
+
+.react-flow__controls {
+  background-color: #11161D !important;
+  border: 1px solid #202832 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+}
+
+.react-flow__controls-button {
+  background-color: #11161D !important;
+  border-bottom: 1px solid #202832 !important;
+  fill: #94A3B8 !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: #151B23 !important;
+  fill: #F1F5F9 !important;
+}
+
+/* Subtle pulse for live status indicators */
+@keyframes status-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.02); }
+  50% { opacity: 0.6; transform: scale(0.96); }
 }
 
-.animate-subtle-pulse {
-  animation: subtle-pulse 3s infinite ease-in-out;
+.animate-status-pulse {
+  animation: status-pulse 2.5s infinite ease-in-out;
 }

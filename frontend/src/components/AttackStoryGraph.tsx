@@ -10,7 +10,8 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import {
   User, Laptop, Terminal, Key, ArrowRightLeft,
-  Server, Database, Info, GitFork, ListFilter, ShieldAlert
+  Server, Database, Info, GitFork, ListFilter, ShieldAlert,
+  Network, X, Activity, ExternalLink
 } from 'lucide-react';
 import { AttackStory } from '../types';
 
@@ -20,56 +21,49 @@ interface AttackStoryGraphProps {
   riskScore?: number;
 }
 
-// Custom Node Renderer Component
-const CustomNode = ({ data }: { data: any }) => {
+// Custom SOC Node Renderer
+const CustomNode = ({ data, selected }: { data: any; selected: boolean }) => {
+  const isSuspicious = data.isSuspicious ?? true;
+
   const getIcon = () => {
     switch (data.type) {
-      case 'user': return <User className="w-5 h-5 text-cyan-400" />;
-      case 'device': return <Laptop className="w-5 h-5 text-blue-400" />;
-      case 'process': return <Terminal className="w-5 h-5 text-amber-400" />;
-      case 'credential': return <Key className="w-5 h-5 text-red-400" />;
-      case 'lateral_movement': return <ArrowRightLeft className="w-5 h-5 text-purple-400" />;
-      case 'server': return <Server className="w-5 h-5 text-emerald-400" />;
-      case 'database': return <Database className="w-5 h-5 text-rose-400" />;
-      default: return <ShieldAlert className="w-5 h-5 text-cyan-400" />;
-    }
-  };
-
-  const getBorderColor = () => {
-    switch (data.type) {
-      case 'credential':
-      case 'database':
-        return 'border-rose-500/50 bg-rose-950/40 shadow-rose-900/20';
-      case 'lateral_movement':
-        return 'border-purple-500/50 bg-purple-950/40 shadow-purple-900/20';
-      case 'process':
-        return 'border-amber-500/50 bg-amber-950/40 shadow-amber-900/20';
-      default:
-        return 'border-cyan-500/40 bg-cyber-900/90 shadow-cyan-900/20';
+      case 'user': return <User className="w-4 h-4 text-soc-cyan" />;
+      case 'device': return <Laptop className="w-4 h-4 text-soc-blue" />;
+      case 'ip': return <Network className="w-4 h-4 text-soc-critical" />;
+      case 'process': return <Terminal className="w-4 h-4 text-soc-warning" />;
+      case 'credential': return <Key className="w-4 h-4 text-soc-critical" />;
+      case 'lateral_movement': return <ArrowRightLeft className="w-4 h-4 text-soc-high" />;
+      case 'server': return <Server className="w-4 h-4 text-soc-secondary" />;
+      case 'database': return <Database className="w-4 h-4 text-soc-critical" />;
+      default: return <ShieldAlert className="w-4 h-4 text-soc-blue" />;
     }
   };
 
   return (
-    <div className={`px-4 py-3 rounded-xl border ${getBorderColor()} backdrop-blur-md shadow-lg min-w-[190px] transition-all hover:scale-105`}>
-      <div className="flex items-center gap-2.5 mb-1.5">
-        <div className="p-1.5 rounded-lg bg-cyber-800/80 border border-cyber-700">
+    <div className={`px-3.5 py-2.5 rounded-md border text-left transition-all min-w-[170px] ${
+      selected
+        ? 'border-soc-blue bg-soc-elevated shadow-accent-subtle ring-1 ring-soc-blue'
+        : isSuspicious
+        ? 'border-soc-border bg-soc-panel hover:border-soc-borderMuted'
+        : 'border-soc-border bg-soc-card opacity-70'
+    }`}>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="p-1 rounded bg-soc-card border border-soc-border">
           {getIcon()}
         </div>
-        <div className="flex flex-col">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+        <div className="min-w-0">
+          <div className="text-[9px] uppercase font-mono tracking-wider text-soc-muted">
             {data.type?.replace('_', ' ')}
-          </span>
-          <span className="text-xs font-semibold text-white tracking-tight">
+          </div>
+          <div className="text-xs font-semibold text-soc-text truncate font-mono">
             {data.label}
-          </span>
+          </div>
         </div>
       </div>
       {data.details && (
-        <div className="mt-1 pt-1 border-t border-slate-700/50 text-[10px] text-slate-300 font-mono flex flex-col gap-0.5">
-          {Object.entries(data.details).slice(0, 2).map(([k, v]) => (
-            <div key={k} className="truncate">
-              <span className="text-slate-400">{k}:</span> {String(v)}
-            </div>
+        <div className="mt-1 pt-1 border-t border-soc-border text-[10px] text-soc-secondary font-mono truncate">
+          {Object.entries(data.details).slice(0, 1).map(([k, v]) => (
+            <span key={k}>{k}: {String(v)}</span>
           ))}
         </div>
       )}
@@ -84,59 +78,61 @@ const nodeTypes = {
 export const AttackStoryGraph: React.FC<AttackStoryGraphProps> = ({
   attackStory,
   incidentTitle,
-  riskScore = 91,
+  riskScore = 85,
 }) => {
   const [viewMode, setViewMode] = useState<'graph' | 'narrative'>('graph');
+  const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
 
   // Build React Flow graph data
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!attackStory || !attackStory.nodes || attackStory.nodes.length === 0) {
-      // Default fallback layout
       const defaultSequence = [
-        { id: 'node-user', label: 'User: alex', type: 'user', details: { role: 'Domain User' } },
-        { id: 'node-device', label: 'Workstation: PC-017', type: 'device', details: { os: 'Windows 11' } },
-        { id: 'node-process', label: 'PowerShell Execution', type: 'process', details: { pid: 4820 } },
-        { id: 'node-cred', label: 'LSASS Memory Dump', type: 'credential', details: { tech: 'T1003.001' } },
-        { id: 'node-lateral', label: 'Lateral Movement', type: 'lateral_movement', details: { proto: 'WinRM' } },
-        { id: 'node-server', label: 'Server: FILESERVER-02', type: 'server', details: { ip: '10.0.2.14' } },
-        { id: 'node-database', label: 'Database: DB-01', type: 'database', details: { table: 'customers' } },
+        { id: 'node-user', label: 'alice.smith', type: 'user', details: { role: 'Finance Analyst', dept: 'Treasury' }, isSuspicious: true },
+        { id: 'node-ip', label: '198.51.100.44', type: 'ip', details: { country: 'Romania', reputation: 'Suspicious (78%)' }, isSuspicious: true },
+        { id: 'node-device', label: 'DEV-UNKNOWN-98', type: 'device', details: { os: 'Linux x86_64', first_seen: 'Today' }, isSuspicious: true },
+        { id: 'node-process', label: 'PowerShell Cradle', type: 'process', details: { pid: 4820, cmd: 'enc -bypass' }, isSuspicious: true },
+        { id: 'node-cred', label: 'Auth Token Access', type: 'credential', details: { tech: 'T1078 (Valid Accounts)' }, isSuspicious: true },
+        { id: 'node-server', label: 'API Gateway', type: 'server', details: { endpoint: '/api/v1/customers' }, isSuspicious: false },
+        { id: 'node-database', label: 'Financial DB-01', type: 'database', details: { table: 'wire_transfers' }, isSuspicious: true },
       ];
 
       const nodes: Node[] = defaultSequence.map((item, idx) => ({
         id: item.id,
         type: 'customNode',
-        position: { x: 40 + (idx % 4) * 240, y: 60 + Math.floor(idx / 4) * 160 },
+        position: { x: 30 + (idx % 4) * 230, y: 40 + Math.floor(idx / 4) * 140 },
         data: item,
       }));
 
       const edges: Edge[] = [];
+      const labels = ['logged_from', 'used_device', 'spawned', 'harvested', 'targeted', 'exfiltrated_from'];
       for (let i = 0; i < defaultSequence.length - 1; i++) {
         edges.push({
           id: `edge-${i}`,
           source: defaultSequence[i].id,
           target: defaultSequence[i + 1].id,
-          label: ['logged_into', 'executed', 'accessed_credentials', 'moved_to', 'compromised', 'accessed'][i] || 'connected_to',
+          label: labels[i] || 'connected_to',
           animated: true,
-          style: { stroke: '#06b6d4', strokeWidth: 2 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#06b6d4' },
+          style: { stroke: '#4F8CFF', strokeWidth: 1.5 },
+          labelStyle: { fill: '#94A3B8', fontSize: 10, fontFamily: 'JetBrains Mono' },
+          labelBgStyle: { fill: '#11161D', fillOpacity: 0.9, rx: 3, ry: 3 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#4F8CFF' },
         });
       }
       return { initialNodes: nodes, initialEdges: edges };
     }
 
-    // Dynamic layout from provided attack story
     const nodes: Node[] = attackStory.nodes.map((node, index) => {
-      // Create a nice zigzag or 2-row layout
       const col = index % 4;
       const row = Math.floor(index / 4);
       return {
         id: node.id,
         type: 'customNode',
-        position: { x: 30 + col * 250, y: 50 + row * 170 },
+        position: { x: 30 + col * 230, y: 40 + row * 140 },
         data: {
           label: node.label,
           type: node.type,
           details: node.details,
+          isSuspicious: true,
         },
       };
     });
@@ -145,126 +141,183 @@ export const AttackStoryGraph: React.FC<AttackStoryGraphProps> = ({
       id: edge.id,
       source: edge.source,
       target: edge.target,
-      label: edge.label.replace('_', ' '),
+      label: edge.label.replace(/_/g, ' '),
       animated: true,
-      style: { stroke: '#38bdf8', strokeWidth: 2 },
-      labelStyle: { fill: '#94a3b8', fontSize: 10, fontWeight: 500 },
-      labelBgStyle: { fill: '#0f172a', fillOpacity: 0.85, rx: 4, ry: 4 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: '#38bdf8' },
+      style: { stroke: '#4F8CFF', strokeWidth: 1.5 },
+      labelStyle: { fill: '#94A3B8', fontSize: 10, fontFamily: 'JetBrains Mono' },
+      labelBgStyle: { fill: '#11161D', fillOpacity: 0.9, rx: 3, ry: 3 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#4F8CFF' },
     }));
 
     return { initialNodes: nodes, initialEdges: edges };
   }, [attackStory]);
 
+  const onNodeClick = (_: any, node: Node) => {
+    setSelectedEntity(node.data);
+  };
+
   return (
-    <div className="glass-panel rounded-2xl overflow-hidden border border-cyber-800 flex flex-col">
+    <div className="soc-panel overflow-hidden flex flex-col">
       {/* Header with View Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-b border-cyber-800 bg-cyber-900/60">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3.5 border-b border-soc-border bg-soc-card">
         <div>
           <div className="flex items-center gap-2">
-            <GitFork className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-base font-bold text-white tracking-tight">
-              Attack Story — Probable Sequence Graph
+            <GitFork className="w-4 h-4 text-soc-blue" />
+            <h3 className="text-sm font-semibold text-soc-text">
+              Dynamic Attack Story Graph
             </h3>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">
-              Risk: {riskScore}/100 Critical
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-soc-critical/20 text-soc-critical border border-soc-critical/30">
+              Risk {riskScore}/100
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Correlated graph reconstruction showing causal relationships from initial access to database impact
+          <p className="text-xs text-soc-secondary mt-0.5">
+            Causal graph topology showing attacker progression from initial access to sensitive database impact.
           </p>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-1.5 p-1 bg-cyber-950 rounded-lg border border-cyber-800 self-start sm:self-auto">
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-1 p-0.5 bg-soc-panel rounded border border-soc-border self-start sm:self-auto">
           <button
             onClick={() => setViewMode('graph')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
               viewMode === 'graph'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-soc-blue/20 text-soc-blue font-semibold border border-soc-blue/40'
+                : 'text-soc-secondary hover:text-soc-text'
             }`}
           >
             <GitFork className="w-3.5 h-3.5" />
-            <span>Interactive Graph</span>
+            <span>Graph View</span>
           </button>
           <button
             onClick={() => setViewMode('narrative')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
               viewMode === 'narrative'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-soc-blue/20 text-soc-blue font-semibold border border-soc-blue/40'
+                : 'text-soc-secondary hover:text-soc-text'
             }`}
           >
             <ListFilter className="w-3.5 h-3.5" />
-            <span>Attack Narrative</span>
+            <span>Narrative</span>
           </button>
         </div>
       </div>
 
-      {/* Main View Area */}
+      {/* Main Graph Canvas */}
       {viewMode === 'graph' ? (
-        <div className="h-[430px] w-full bg-cyber-950/80 relative">
-          <ReactFlow
-            nodes={initialNodes}
-            edges={initialEdges}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.25 }}
-            attributionPosition="bottom-left"
-          >
-            <Background color="#1e293b" gap={18} size={1} />
-            <Controls className="bg-cyber-900 border border-cyber-700 text-white rounded-lg overflow-hidden" />
-          </ReactFlow>
-
-          {/* Floating Stage Legend */}
-          <div className="absolute bottom-3 right-3 p-2 rounded-xl bg-cyber-900/90 border border-cyber-700/80 backdrop-blur-md text-[10px] text-slate-300 flex items-center gap-3 shadow-lg">
-            <span className="font-semibold text-slate-400">Stages:</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" /> Identity</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> Execution</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Credential</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" /> Lateral</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" /> Database</span>
+        <div className="h-[380px] w-full bg-soc-bg relative flex">
+          <div className="flex-1 h-full">
+            <ReactFlow
+              nodes={initialNodes}
+              edges={initialEdges}
+              nodeTypes={nodeTypes}
+              onNodeClick={onNodeClick}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              attributionPosition="bottom-left"
+            >
+              <Background color="#202832" gap={20} size={1} />
+              <Controls />
+            </ReactFlow>
           </div>
+
+          {/* Contextual Entity Inspector Sidebar */}
+          {selectedEntity && (
+            <div className="w-64 bg-soc-panel border-l border-soc-border p-4 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-150">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-soc-border">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-soc-muted">
+                    Entity Inspector
+                  </span>
+                  <button 
+                    onClick={() => setSelectedEntity(null)}
+                    className="text-soc-muted hover:text-soc-text p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div>
+                  <div className="text-xs font-bold text-soc-text font-mono truncate">
+                    {selectedEntity.label}
+                  </div>
+                  <div className="text-[10px] font-mono text-soc-blue uppercase mt-0.5">
+                    Type: {selectedEntity.type}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <div className="text-[11px] font-mono text-soc-secondary">
+                    <span className="text-soc-muted block">First Observed:</span>
+                    Today during incident window
+                  </div>
+                  <div className="text-[11px] font-mono text-soc-secondary">
+                    <span className="text-soc-muted block">Reputation Assessment:</span>
+                    <span className="text-soc-critical font-semibold">Flagged Suspicious</span>
+                  </div>
+                  {selectedEntity.details && (
+                    <div className="p-2 rounded bg-soc-card border border-soc-border text-[10px] font-mono space-y-1">
+                      {Object.entries(selectedEntity.details).map(([k, v]) => (
+                        <div key={k} className="truncate">
+                          <span className="text-soc-muted">{k}:</span> <span className="text-soc-text">{String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-[10px] font-mono text-soc-muted pt-2 border-t border-soc-border">
+                Click graph background to deselect
+              </div>
+            </div>
+          )}
+
+          {/* Subtle Stage Legend */}
+          {!selectedEntity && (
+            <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-md bg-soc-panel/90 border border-soc-border text-[10px] text-soc-secondary flex items-center gap-3 font-mono shadow-panel">
+              <span className="font-semibold text-soc-muted">Causality:</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-soc-cyan" /> Identity</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-soc-warning" /> Process</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-soc-critical" /> Impact</span>
+            </div>
+          )}
         </div>
       ) : (
-        /* Readable Text Narrative View */
-        <div className="p-6 bg-cyber-950/50 space-y-4">
-          <div className="p-4 rounded-xl bg-cyber-900/80 border border-cyber-700/80">
-            <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold mb-2">
+        /* Text Narrative View */
+        <div className="p-5 bg-soc-panel space-y-4">
+          <div className="p-4 rounded-md bg-soc-card border border-soc-border">
+            <div className="flex items-center gap-1.5 text-soc-blue text-xs font-semibold mb-1.5">
               <Info className="w-4 h-4" />
-              <span>Evidence-Grounded Synthesis</span>
+              <span>Synthesized Attack Progression Narrative</span>
             </div>
-            <p className="text-sm text-slate-200 leading-relaxed">
+            <p className="text-xs text-soc-text leading-relaxed">
               {attackStory?.summary_text ||
-                "User account 'alex' was logged into on PC-017 from external untrusted IP 185.23.44.12. The attacker executed obfuscated PowerShell commands, dumped credentials from LSASS memory, pivoted laterally to FILESERVER-02 via WinRM, and queried confidential client records on DB-01."}
+                "Multiple authentication failures from external IP 198.51.100.44 were followed by a successful logon for user alice.smith. The session originated from an unrecorded device hardware profile, quickly accessed sensitive financial database endpoints, and triggered volumetric rate anomalies."}
             </p>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-slate-400">
-              Reconstructed Attack Progression Steps
+          <div className="space-y-2">
+            <h4 className="text-[11px] uppercase font-mono font-bold tracking-wider text-soc-muted">
+              Chronological Kill-Chain Stages
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {[
-                { stage: '1. Initial Access', title: 'External RDP Authentication', target: 'PC-017', tech: 'T1078 - Valid Accounts', desc: 'Logon from suspicious external IP 185.23.44.12 using user alex' },
-                { stage: '2. Execution', title: 'Encoded PowerShell Spawn', target: 'PC-017', tech: 'T1059.001 - PowerShell', desc: 'Hidden encoded download cradle spawned by explorer.exe' },
-                { stage: '3. Credential Access', title: 'LSASS Memory Extraction', target: 'PC-017', tech: 'T1003.001 - OS Credential Dump', desc: 'Direct memory handle opened to harvest administrative session tokens' },
-                { stage: '4. Discovery', title: 'Subnet SMB Reconnaissance', target: 'FILESERVER-02', tech: 'T1018 - Remote System Discovery', desc: 'Probing ports 445/139 searching for internal central storage shares' },
-                { stage: '5. Lateral Movement', title: 'WinRM Remote Execution Pivot', target: 'FILESERVER-02', tech: 'T1021.002 - SMB/Windows Admin Shares', desc: 'Remote service established using stolen tokens to compromise file server' },
-                { stage: '6. Database Impact', title: 'Unauthorized DB Query', target: 'DB-01', tech: 'T1005 - Data from Local System', desc: 'Execution of SQL queries extracting 15,000 customer financial records' }
+                { stage: '1. Initial Access', title: 'Brute-Force & Valid Login', target: 'auth-service', tech: 'T1110 / T1078', desc: 'Authentication attempts from untrusted IP 198.51.100.44' },
+                { stage: '2. Device Drift', title: 'Unseen Hardware Signature', target: 'DEV-UNKNOWN-98', tech: 'T1078.004', desc: 'Session established on previously unseen Linux client' },
+                { stage: '3. Execution', title: 'PowerShell / Shell Command', target: 'Internal API', tech: 'T1059.001', desc: 'Privileged command invocation for session token acquisition' },
+                { stage: '4. Data Access', title: 'Sensitive Financial Query', target: 'Financial DB-01', tech: 'T1020 / T1005', desc: 'Unusual volumetric query on customer wire transfer records' }
               ].map((step, idx) => (
-                <div key={idx} className="p-3 rounded-lg bg-cyber-900 border border-cyber-800 flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-xs font-bold shrink-0 border border-cyan-500/30">
+                <div key={idx} className="p-3 rounded-md bg-soc-card border border-soc-border flex items-start gap-2.5">
+                  <div className="w-5 h-5 rounded bg-soc-elevated text-soc-blue flex items-center justify-center text-[10px] font-mono font-bold shrink-0 border border-soc-border">
                     {idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-bold text-white">{step.title}</span>
-                      <span className="text-[10px] font-mono text-cyan-400">{step.target}</span>
+                      <span className="text-xs font-semibold text-soc-text">{step.title}</span>
+                      <span className="text-[10px] font-mono text-soc-muted">{step.target}</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{step.desc}</p>
-                    <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-cyber-800 text-[10px] text-slate-300 font-mono">
+                    <p className="text-[11px] text-soc-secondary mt-0.5">{step.desc}</p>
+                    <span className="inline-block mt-1 px-1.5 py-0.2 rounded bg-soc-elevated text-[10px] text-soc-cyan font-mono border border-soc-border">
                       {step.tech}
                     </span>
                   </div>

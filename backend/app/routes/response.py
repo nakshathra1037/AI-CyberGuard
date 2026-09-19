@@ -6,6 +6,7 @@ from backend.app.schemas.response import (
 from backend.app.database import get_repository
 from backend.app.response.simulator import response_simulator
 from backend.app.schemas.incident import IncidentStatus
+from backend.app.services.websocket_manager import ws_manager
 
 router = APIRouter(tags=["Response Simulation"])
 
@@ -33,6 +34,7 @@ async def simulate_single_action(payload: SimulateActionRequest):
         parameters=payload.parameters
     )
     await repo.save_response_action(action.model_dump())
+    await ws_manager.broadcast("CONTAINMENT_ACTION", action.model_dump())
     return action
 
 
@@ -46,6 +48,7 @@ async def simulate_all_actions(payload: SimulateAllRequest):
     actions = response_simulator.simulate_all_recommendations(inc)
     for act in actions:
         await repo.save_response_action(act.model_dump())
+        await ws_manager.broadcast("CONTAINMENT_ACTION", act.model_dump())
 
     # Update incident status to contained
     await repo.update_incident_status(
@@ -61,3 +64,4 @@ async def get_incident_response_history(incident_id: str):
     repo = await get_repository()
     actions = await repo.get_response_actions(incident_id)
     return actions
+

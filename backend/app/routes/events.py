@@ -10,7 +10,13 @@ from backend.app.schemas.event import (
 )
 from backend.app.database import get_repository
 from backend.app.detection.risk_engine import risk_engine
-from backend.app.services.ingestion_service import ingestion_service
+from backend.app.services.cti_service import cti_service
+from backend.app.services.websocket_manager import ws_manager
+
+try:
+    from backend.app.services.ingestion_service import ingestion_service
+except ImportError:
+    ingestion_service = None
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -33,18 +39,35 @@ async def ingest_event(payload: EventCreate):
     ev_dict["event_id"] = ev_id
     ev_dict["timestamp"] = payload.timestamp or now_str
 
+    # CTI Threat Intelligence Enrichment
+    ev_dict = cti_service.enrich_event(ev_dict)
+
     det = risk_engine.analyze_event(ev_dict)
     ev_dict["risk_score"] = det.risk_score
     ev_dict["triggered_rules"] = [r.name for r in det.triggered_rules]
     ev_dict["severity"] = det.severity
 
     saved = await repo.save_event(ev_dict)
+
+    # Broadcast via WebSocket
+    await ws_manager.broadcast("NEW_EVENT", saved)
+    if det.is_suspicious or det.risk_score >= 60:
+        await ws_manager.broadcast("THREAT_ALERT", {
+            "event_id": ev_id,
+            "risk_score": det.risk_score,
+            "severity": det.severity,
+            "reasons": det.reasons,
+            "description": ev_dict.get("description", "")
+        })
+
     return saved
 
 
 @router.post("/bulk", response_model=BulkIngestResponse)
 async def bulk_ingest_events(payload: BulkEventIngestRequest):
     """Ingests multiple structured events in one batch and optionally updates correlation."""
+    if not ingestion_service:
+        raise HTTPException(status_code=501, detail="Bulk ingestion service unavailable")
     raw_list = [e.model_dump() for e in payload.events]
     result = await ingestion_service.process_and_ingest_events(
         raw_list,
@@ -62,6 +85,8 @@ async def upload_log_file(
     Accepts uploaded .json or .csv log files, validates records,
     evaluates risk, and automatically correlates into incidents.
     """
+    if not ingestion_service:
+        raise HTTPException(status_code=501, detail="Upload ingestion service unavailable")
     filename = file.filename.lower() if file.filename else "log.txt"
     try:
         content_bytes = await file.read()
@@ -90,6 +115,8 @@ async def upload_log_file(
 @router.post("/simulate-injection", response_model=BulkIngestResponse)
 async def inject_simulated_scenario(payload: SimulateInjectionRequest):
     """Injects a pre-configured synthetic multi-stage attack scenario for live testing."""
+    if not ingestion_service:
+        raise HTTPException(status_code=501, detail="Scenario generator unavailable")
     synthetic_events = ingestion_service.generate_simulated_scenario_events(
         scenario=payload.scenario,
         user=payload.target_user or "sarah",

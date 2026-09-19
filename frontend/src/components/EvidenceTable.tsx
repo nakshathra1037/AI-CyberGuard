@@ -21,66 +21,66 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-6 border border-cyber-800 space-y-6">
+    <div className="soc-panel p-5 space-y-5">
       {/* Affected Assets Summary */}
       <div>
-        <h3 className="text-sm font-bold text-white tracking-tight mb-3 flex items-center gap-2">
-          <Database className="w-4 h-4 text-cyan-400" />
-          <span>Identified Affected Assets</span>
+        <h3 className="text-xs font-semibold text-soc-text uppercase font-mono tracking-wide mb-3 flex items-center gap-2">
+          <Database className="w-3.5 h-3.5 text-soc-blue" />
+          <span>Affected Asset Topology</span>
         </h3>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
           {/* Users */}
-          <div className="p-3 rounded-xl bg-cyber-900/80 border border-cyber-800">
-            <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
-              <User className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="p-2.5 rounded-md bg-soc-card border border-soc-border">
+            <div className="flex items-center gap-1.5 text-soc-secondary text-[11px] mb-0.5">
+              <User className="w-3 h-3 text-soc-cyan" />
               <span>Users ({affectedAssets.users?.length || 0})</span>
             </div>
-            <div className="font-mono text-xs font-semibold text-white truncate">
+            <div className="font-mono text-xs font-semibold text-soc-text truncate">
               {affectedAssets.users?.join(', ') || 'None'}
             </div>
           </div>
 
           {/* Workstations */}
-          <div className="p-3 rounded-xl bg-cyber-900/80 border border-cyber-800">
-            <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
-              <Laptop className="w-3.5 h-3.5 text-blue-400" />
-              <span>Workstations ({affectedAssets.devices?.length || 0})</span>
+          <div className="p-2.5 rounded-md bg-soc-card border border-soc-border">
+            <div className="flex items-center gap-1.5 text-soc-secondary text-[11px] mb-0.5">
+              <Laptop className="w-3 h-3 text-soc-blue" />
+              <span>Devices ({affectedAssets.devices?.length || 0})</span>
             </div>
-            <div className="font-mono text-xs font-semibold text-white truncate">
+            <div className="font-mono text-xs font-semibold text-soc-text truncate">
               {affectedAssets.devices?.join(', ') || 'None'}
             </div>
           </div>
 
           {/* Servers */}
-          <div className="p-3 rounded-xl bg-cyber-900/80 border border-cyber-800">
-            <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
-              <Server className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="p-2.5 rounded-md bg-soc-card border border-soc-border">
+            <div className="flex items-center gap-1.5 text-soc-secondary text-[11px] mb-0.5">
+              <Server className="w-3 h-3 text-soc-secondary" />
               <span>Servers ({affectedAssets.servers?.length || 0})</span>
             </div>
-            <div className="font-mono text-xs font-semibold text-white truncate">
+            <div className="font-mono text-xs font-semibold text-soc-text truncate">
               {affectedAssets.servers?.join(', ') || 'None'}
             </div>
           </div>
 
           {/* Databases */}
-          <div className="p-3 rounded-xl bg-cyber-900/80 border border-cyber-800">
-            <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
-              <Database className="w-3.5 h-3.5 text-rose-400" />
+          <div className="p-2.5 rounded-md bg-soc-card border border-soc-border">
+            <div className="flex items-center gap-1.5 text-soc-secondary text-[11px] mb-0.5">
+              <Database className="w-3 h-3 text-soc-critical" />
               <span>Databases ({affectedAssets.databases?.length || 0})</span>
             </div>
-            <div className="font-mono text-xs font-semibold text-white truncate">
+            <div className="font-mono text-xs font-semibold text-soc-text truncate">
               {affectedAssets.databases?.join(', ') || 'None'}
             </div>
           </div>
 
           {/* Observed IPs */}
-          <div className="p-3 rounded-xl bg-cyber-900/80 border border-cyber-800">
-            <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
-              <Globe className="w-3.5 h-3.5 text-amber-400" />
+          <div className="p-2.5 rounded-md bg-soc-card border border-soc-border">
+            <div className="flex items-center gap-1.5 text-soc-secondary text-[11px] mb-0.5">
+              <Globe className="w-3 h-3 text-soc-warning" />
               <span>Observed IPs ({affectedAssets.ips?.length || 0})</span>
             </div>
-            <div className="font-mono text-xs font-semibold text-white truncate">
+            <div className="font-mono text-xs font-semibold text-soc-text truncate">
               {affectedAssets.ips?.join(', ') || 'None'}
             </div>
           </div>
@@ -89,68 +89,68 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
 
       {/* Correlated Evidence Table */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-            <FileSearch className="w-4 h-4 text-cyan-400" />
-            <span>Traceable Incident Evidence ({evidence.length})</span>
+        <div className="flex items-center justify-between mb-2.5">
+          <h3 className="text-xs font-semibold text-soc-text uppercase font-mono tracking-wide flex items-center gap-2">
+            <FileSearch className="w-3.5 h-3.5 text-soc-blue" />
+            <span>Traceable Telemetry Evidence ({evidence.length})</span>
           </h3>
-          <span className="text-[11px] text-slate-400">Strictly grounded telemetry records</span>
+          <span className="text-[10px] font-mono text-soc-muted">Grounded in raw log events</span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-cyber-800">
+        <div className="overflow-x-auto rounded-md border border-soc-border">
           <table className="w-full text-left text-xs">
-            <thead className="bg-cyber-900 text-slate-400 uppercase tracking-wider text-[10px] font-semibold border-b border-cyber-800">
+            <thead className="bg-soc-card text-soc-muted uppercase tracking-wider text-[10px] font-mono border-b border-soc-border">
               <tr>
-                <th className="p-3">Event ID</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Description</th>
-                <th className="p-3">Source / Dest</th>
-                <th className="p-3 text-center">Risk</th>
-                <th className="p-3 text-right">Details</th>
+                <th className="py-2 px-3">Event ID</th>
+                <th className="py-2 px-3">Type</th>
+                <th className="py-2 px-3">Description</th>
+                <th className="py-2 px-3">Source &rarr; Dest</th>
+                <th className="py-2 px-3 text-center">Risk</th>
+                <th className="py-2 px-3 text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-cyber-800/60 bg-cyber-950/60">
+            <tbody className="divide-y divide-soc-border bg-soc-panel">
               {evidence.map((ev) => (
                 <React.Fragment key={ev.event_id}>
-                  <tr className="hover:bg-cyber-900/60 transition-colors">
-                    <td className="p-3 font-mono font-bold text-cyan-400">{ev.event_id}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded bg-cyber-800 text-slate-300 font-mono text-[10px]">
+                  <tr className="hover:bg-soc-elevated/40 transition-colors">
+                    <td className="py-2.5 px-3 font-mono font-bold text-soc-blue">{ev.event_id}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-1.5 py-0.5 rounded bg-soc-card border border-soc-border text-soc-text font-mono text-[10px]">
                         {ev.event_type}
                       </span>
                     </td>
-                    <td className="p-3 text-slate-200 max-w-xs truncate">{ev.description}</td>
-                    <td className="p-3 font-mono text-[11px] text-slate-400">
+                    <td className="py-2.5 px-3 text-soc-text max-w-xs truncate">{ev.description}</td>
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-soc-secondary">
                       {ev.source || 'N/A'} &rarr; {ev.destination || 'N/A'}
                     </td>
-                    <td className="p-3 text-center font-mono">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                    <td className="py-2.5 px-3 text-center font-mono">
+                      <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-soc-critical/15 text-soc-critical border border-soc-critical/30">
                         +{ev.risk_contribution}
                       </span>
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="py-2.5 px-3 text-right">
                       <button
                         onClick={() => toggleExpand(ev.event_id)}
-                        className="p-1 rounded hover:bg-cyber-800 text-slate-400 hover:text-white"
+                        className="p-1 rounded hover:bg-soc-elevated text-soc-muted hover:text-soc-text transition-colors"
                       >
                         {expandedId === ev.event_id ? (
-                          <ChevronUp className="w-4 h-4" />
+                          <ChevronUp className="w-3.5 h-3.5" />
                         ) : (
-                          <ChevronDown className="w-4 h-4" />
+                          <ChevronDown className="w-3.5 h-3.5" />
                         )}
                       </button>
                     </td>
                   </tr>
 
                   {expandedId === ev.event_id && (
-                    <tr className="bg-cyber-900/40">
-                      <td colSpan={6} className="p-4">
-                        <div className="p-3 rounded-lg bg-cyber-950 border border-cyber-800 font-mono text-[11px] text-slate-300">
-                          <div className="text-cyan-400 font-bold mb-1">
-                            Relationship: {ev.relationship_to_incident}
+                    <tr className="bg-soc-card/50">
+                      <td colSpan={6} className="p-3">
+                        <div className="p-3 rounded bg-soc-bg border border-soc-border font-mono text-[11px] text-soc-secondary space-y-1">
+                          <div className="text-soc-blue font-semibold">
+                            Causal Relationship: {ev.relationship_to_incident}
                           </div>
-                          <div className="text-slate-400 mb-2">Timestamp: {ev.timestamp}</div>
-                          <pre className="text-[10px] overflow-x-auto text-emerald-400">
+                          <div className="text-soc-muted">Timestamp: {ev.timestamp}</div>
+                          <pre className="text-[10px] overflow-x-auto text-soc-cyan pt-1">
                             {JSON.stringify(ev.metadata || {}, null, 2)}
                           </pre>
                         </div>

@@ -1,106 +1,175 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { Topbar } from './components/Topbar';
+import { CommandPalette } from './components/CommandPalette';
 import { Dashboard } from './pages/Dashboard';
 import { Incidents } from './pages/Incidents';
 import { IncidentInvestigation } from './pages/IncidentInvestigation';
 import { Events } from './pages/Events';
 import { ReportView } from './pages/ReportView';
 import { Intelligence } from './pages/Intelligence';
-import { api } from './services/api';
-import { ShieldAlert, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Simulator } from './pages/Simulator';
+import { Admin } from './pages/Admin';
+import { Login } from './pages/Login';
+import { api, authStorage } from './services/api';
+import { UserProfile, WebSocketMessage } from './types';
+import { ShieldAlert, CheckCircle2, Bell } from 'lucide-react';
 
 const AppContent: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(authStorage.getUser() || {
+    id: 'USR-001',
+    username: 'admin',
+    email: 'admin@cyberguard.ai',
+    full_name: 'Marcus Vance',
+    role: 'admin',
+    permissions: ['all:read', 'all:write', 'containment:approve']
+  });
   const [isRunningDemo, setIsRunningDemo] = useState(false);
-  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'info' | 'error'; text: string } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'info' | 'error' | 'alert'; text: string; title?: string } | null>(null);
   const [activeIncidentId, setActiveIncidentId] = useState<string>('INC-1024');
+  const [wsStatus, setWsStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const navigate = useNavigate();
 
-  const showToast = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToastMessage({ text, type });
+  const showToast = (text: string, type: 'success' | 'info' | 'error' | 'alert' = 'success', title?: string) => {
+    setToastMessage({ text, type, title });
     setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  // Real-Time WebSocket stream connection
+  useEffect(() => {
+    const unsubscribe = api.subscribeToThreatStream(
+      (msg: WebSocketMessage) => {
+        if (msg.type === 'NEW_EVENT') {
+          showToast(`Telemetry Ingested: ${msg.data.event_type} on ${msg.data.resource}`, 'info', 'Telemetry Event');
+        } else if (msg.type === 'THREAT_ALERT') {
+          showToast(
+            `Threat Alert (${msg.data.risk_score}/100): ${msg.data.reasons?.join(', ')}`,
+            'alert',
+            'Threat Detected'
+          );
+        } else if (msg.type === 'CONTAINMENT_ACTION') {
+          showToast(
+            `Containment Executed: ${msg.data.action_type} on ${msg.data.target} [SIMULATION]`,
+            'success',
+            'Containment Active'
+          );
+        }
+      },
+      (status) => setWsStatus(status)
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLoginSuccess = (user: UserProfile) => {
+    setCurrentUser(user);
+    showToast(`Authenticated as ${user.username} (${user.role.toUpperCase()})`, 'success', 'Session Active');
+  };
+
+  const handleLogout = async () => {
+    await api.logout();
+    setCurrentUser(null);
+    showToast('Session terminated.', 'info');
+    navigate('/login');
   };
 
   const handleRunDemo = async () => {
     setIsRunningDemo(true);
-    showToast('Executing 7-Stage Autonomous Demo Pipeline: Ingestion -> Detection -> Correlation -> Story -> AI -> Response -> Report...', 'info');
+    showToast('Executing 7-stage autonomous attack and correlation pipeline...', 'info', 'Pipeline Active');
     try {
       const result = await api.runDemo();
       setActiveIncidentId(result.incident.incident_id);
       showToast(
-        `Demo Succeeded! Correlated 7 events into ${result.incident.incident_id} (Risk: ${result.risk_score}/100 Critical). Redirecting to Investigation...`,
-        'success'
+        `Correlated events into ${result.incident.incident_id} (Risk: ${result.risk_score}/100).`,
+        'success',
+        'Incident Generated'
       );
       navigate(`/incidents/${result.incident.incident_id}`);
     } catch (err: any) {
-      showToast(`Demo execution error: ${err.message}`, 'error');
+      showToast(`Execution error: ${err.message}`, 'error', 'Failed');
     } finally {
       setIsRunningDemo(false);
     }
   };
 
-  const handleResetDemo = async () => {
-    try {
-      await api.resetDemo();
-      showToast('Environment successfully reset to baseline clean state.', 'info');
-      navigate('/');
-    } catch (err: any) {
-      showToast(`Reset error: ${err.message}`, 'error');
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-cyber-950 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-black">
-      {/* Top Navbar */}
-      <Navbar
+    <div className="min-h-screen bg-soc-bg text-soc-text flex flex-col selection:bg-soc-blue selection:text-white">
+      {/* Top Header */}
+      <Topbar
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onRunDemo={handleRunDemo}
-        onResetDemo={handleResetDemo}
         isRunningDemo={isRunningDemo}
-        activeIncidentId={activeIncidentId}
+        wsStatus={wsStatus}
       />
 
-      {/* Global Toast Notification */}
+      {/* Global Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+      />
+
+      {/* Main App Layout with Sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar activeIncidentId={activeIncidentId} />
+
+        <main className="flex-1 overflow-y-auto p-5 lg:p-6">
+          <div className="max-w-7xl mx-auto">
+            <Routes>
+              <Route path="/" element={<Dashboard onRunDemo={handleRunDemo} isRunningDemo={isRunningDemo} />} />
+              <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
+              <Route path="/incidents" element={<Incidents />} />
+              <Route path="/incidents/:incidentId" element={<IncidentInvestigation />} />
+              <Route path="/events" element={<Events />} />
+              <Route path="/reports/:incidentId" element={<ReportView />} />
+              <Route path="/intelligence" element={<Intelligence />} />
+              <Route path="/simulator" element={<Simulator />} />
+              <Route path="/admin" element={<Admin />} />
+            </Routes>
+          </div>
+        </main>
+      </div>
+
+      {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-md animate-bounce">
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm animate-in fade-in slide-in-from-bottom-3 duration-200">
           <div
-            className={`p-4 rounded-xl shadow-2xl border backdrop-blur-md flex items-center gap-3 text-xs ${
+            className={`p-3.5 rounded-md shadow-elevated border flex items-start gap-2.5 text-xs font-mono ${
               toastMessage.type === 'success'
-                ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
+                ? 'bg-soc-panel border-soc-success text-soc-text'
                 : toastMessage.type === 'error'
-                ? 'bg-rose-950/90 border-rose-500/50 text-rose-200'
-                : 'bg-cyan-950/90 border-cyan-500/50 text-cyan-200'
+                ? 'bg-soc-panel border-soc-critical text-soc-text'
+                : toastMessage.type === 'alert'
+                ? 'bg-soc-panel border-soc-warning text-soc-text'
+                : 'bg-soc-panel border-soc-blue text-soc-text'
             }`}
           >
             {toastMessage.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-soc-success shrink-0 mt-0.5" />
+            ) : toastMessage.type === 'alert' ? (
+              <ShieldAlert className="w-4 h-4 text-soc-warning shrink-0 mt-0.5" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-cyan-400 shrink-0" />
+              <Bell className="w-4 h-4 text-soc-blue shrink-0 mt-0.5" />
             )}
-            <span>{toastMessage.text}</span>
+            <div className="min-w-0">
+              {toastMessage.title && (
+                <div className="font-bold text-[10px] uppercase text-soc-muted mb-0.5">
+                  {toastMessage.title}
+                </div>
+              )}
+              <span className="leading-tight text-soc-text text-xs">{toastMessage.text}</span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
-        <Routes>
-          <Route path="/" element={<Dashboard onRunDemo={handleRunDemo} isRunningDemo={isRunningDemo} />} />
-          <Route path="/incidents" element={<Incidents />} />
-          <Route path="/incidents/:incidentId" element={<IncidentInvestigation />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/reports/:incidentId" element={<ReportView />} />
-          <Route path="/intelligence" element={<Intelligence />} />
-        </Routes>
-      </main>
-
       {/* Footer */}
-      <footer className="border-t border-cyber-800/80 bg-cyber-950/80 py-4 px-4 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>AI CyberGuard &copy; 2026 — Autonomous AI Cybersecurity Platform</span>
-          <span className="text-amber-400/80 font-mono text-[11px]">
-            SAFE SIMULATION MODE: All defensive containment actions executed are simulated.
-          </span>
-        </div>
+      <footer className="h-7 border-t border-soc-border bg-soc-panel px-4 flex items-center justify-between text-[10px] font-mono text-soc-muted shrink-0 select-none">
+        <span>AI-CyberGuard Enterprise SOC Platform &copy; 2026</span>
+        <span className="text-soc-cyan">POLICY: SAFE SIMULATION MODE ACTIVE (ENABLE_LIVE_ACTIONS=false)</span>
       </footer>
     </div>
   );

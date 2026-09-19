@@ -2,21 +2,28 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   ShieldAlert, Play, RotateCcw, Activity, ShieldCheck,
-  AlertTriangle, Cpu, Terminal, FileText, BarChart3, Database
+  Cpu, Terminal, FileText, BarChart3, User, LogOut, Radio
 } from 'lucide-react';
+import { UserProfile } from '../types';
 
 interface NavbarProps {
   onRunDemo: () => void;
   onResetDemo: () => void;
   isRunningDemo: boolean;
   activeIncidentId?: string;
+  currentUser?: UserProfile | null;
+  wsStatus?: 'connected' | 'connecting' | 'disconnected';
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onRunDemo,
   onResetDemo,
   isRunningDemo,
-  activeIncidentId
+  activeIncidentId,
+  currentUser,
+  wsStatus = 'connected',
+  onLogout
 }) => {
   const location = useLocation();
 
@@ -58,6 +65,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ShieldCheck className="w-3 h-3 text-amber-400" />
                 Simulation Mode
               </span>
+
+              {/* WebSocket Live Stream Status */}
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono rounded-md border ${
+                wsStatus === 'connected'
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+                  : 'bg-rose-950/60 text-rose-300 border-rose-500/40'
+              }`}>
+                <Radio className={`w-2.5 h-2.5 ${wsStatus === 'connected' ? 'animate-pulse text-emerald-400' : 'text-rose-400'}`} />
+                <span>{wsStatus === 'connected' ? 'LIVE STREAM' : 'OFFLINE'}</span>
+              </span>
             </div>
             <p className="text-xs text-slate-400">Autonomous Security Investigation & Response Platform</p>
           </div>
@@ -90,8 +107,33 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </nav>
 
-        {/* Demo Action Buttons */}
+        {/* User Profile & Demo Action Buttons */}
         <div className="flex items-center gap-2.5">
+          {/* User Role Badge */}
+          {currentUser ? (
+            <div className="flex items-center gap-2 bg-cyber-900 border border-cyber-700/80 px-2.5 py-1 rounded-xl">
+              <div className="flex flex-col text-right">
+                <span className="text-[11px] font-semibold text-slate-200 leading-tight">{currentUser.full_name}</span>
+                <span className="text-[9px] uppercase font-mono text-cyan-400 font-bold">{currentUser.role}</span>
+              </div>
+              <button
+                onClick={onLogout}
+                title="Log out"
+                className="p-1 rounded-lg hover:bg-cyber-800 text-slate-400 hover:text-rose-400 transition"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyber-850 hover:bg-cyber-800 text-slate-300 border border-cyber-700 text-xs font-medium transition"
+            >
+              <User className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Login</span>
+            </Link>
+          )}
+
           <button
             onClick={onResetDemo}
             title="Reset to clean baseline state"
@@ -111,12 +153,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isRunningDemo ? (
               <>
                 <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                <span>Processing Pipeline...</span>
+                <span>Processing...</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-black" />
-                <span>Run Full Security Demo</span>
+                <span>Run Demo</span>
               </>
             )}
           </button>

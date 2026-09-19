@@ -3,9 +3,14 @@ export interface NormalizedEvent {
   timestamp: string;
   event_type: string;
   user?: string | null;
+  user_id?: string;
   device?: string | null;
+  device_id?: string;
+  session_id?: string;
   source_ip?: string | null;
   destination?: string | null;
+  destination_ip?: string | null;
+  resource?: string;
   action: string;
   status: string;
   severity: string;
@@ -14,6 +19,8 @@ export interface NormalizedEvent {
   risk_score?: number;
   triggered_rules?: string[];
 }
+
+export type SecurityEvent = NormalizedEvent;
 
 export interface AffectedAssets {
   users: string[];
@@ -75,16 +82,17 @@ export interface Incident {
   incident_id: string;
   title: string;
   type: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: 'low' | 'medium' | 'high' | 'critical' | string;
   risk_score: number;
-  status: 'new' | 'investigating' | 'analyzing' | 'containment' | 'contained' | 'resolved' | 'false_positive';
-  event_ids: string[];
+  status: 'new' | 'investigating' | 'analyzing' | 'containment' | 'contained' | 'resolved' | 'false_positive' | string;
+  affected_user?: string;
   affected_users: string[];
   affected_devices: string[];
   affected_assets: AffectedAssets;
   timeline: TimelineItem[];
   evidence: EvidenceItem[];
   attack_story?: AttackStory;
+  recommended_actions?: ResponseRecommendation[];
   created_at: string;
   updated_at: string;
   status_history?: Array<{
@@ -94,6 +102,8 @@ export interface Incident {
   }>;
 }
 
+export type SecurityIncident = Incident;
+
 export interface ResponseRecommendation {
   action_type: string;
   target: string;
@@ -101,6 +111,7 @@ export interface ResponseRecommendation {
   description: string;
   rationale: string;
   requires_approval: boolean;
+  status?: string;
 }
 
 export interface SimulatedAction {
@@ -214,3 +225,26 @@ export interface BulkIngestResponse {
   message: string;
 }
 
+export type UserRole = 'admin' | 'analyst' | 'auditor' | 'commander' | 'viewer' | string;
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  avatar_url?: string;
+  permissions: string[];
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: UserProfile;
+  expires_in_seconds?: number;
+}
+
+export interface WebSocketMessage {
+  type: 'CONNECTION_ESTABLISHED' | 'NEW_EVENT' | 'THREAT_ALERT' | 'CONTAINMENT_ACTION' | 'PONG' | string;
+  data: any;
+}

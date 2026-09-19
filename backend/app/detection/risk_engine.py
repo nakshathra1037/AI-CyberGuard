@@ -2,11 +2,12 @@ from typing import Dict, Any, List, Tuple
 from datetime import datetime
 from backend.app.detection.baseline import SecurityBaseline
 from backend.app.schemas.detection import DetectionResult, TriggeredRule
+from backend.app.ml.anomaly_detector import anomaly_detector
 
 
 class RiskEngine:
     """
-    Deterministic rule-based security risk engine with contextual synergy analysis.
+    Deterministic rule-based security risk engine with ML behavioral synergy analysis.
     Evaluates individual events and multi-event correlations.
     """
 
@@ -21,7 +22,8 @@ class RiskEngine:
         "LATERAL_MOVEMENT": 30,
         "ADMIN_ACCOUNT_CREATED": 25,
         "SUSPICIOUS_NETWORK": 15,
-        "SENSITIVE_DATABASE_ACCESS": 25
+        "SENSITIVE_DATABASE_ACCESS": 25,
+        "ML_BEHAVIORAL_ANOMALY": 20
     }
 
     @staticmethod
@@ -51,8 +53,23 @@ class RiskEngine:
         indicators: List[str] = []
         score = 0
 
+        # ML Anomaly Detection Evaluation
+        ml_res = anomaly_detector.detect_anomaly(event)
+        if ml_res.get("is_anomaly") and ml_res.get("baseline_status") == "BASELINE_ACTIVE":
+            w = int(self.RULE_WEIGHTS["ML_BEHAVIORAL_ANOMALY"] * ml_res.get("anomaly_score", 0.5))
+            score += w
+            triggered_rules.append(TriggeredRule(
+                rule_id="RULE-ML-ANOMALY",
+                name="ML Behavioral Anomaly Detected",
+                weight=w,
+                reason=f"Isolation Forest vector deviation score: {ml_res.get('anomaly_score')}/1.0 ({ml_res.get('explanation')})",
+                evidence_fields={"anomaly_score": ml_res.get("anomaly_score"), "model": ml_res.get("model_version")}
+            ))
+            reasons.append(f"ML Behavioral Anomaly (Score: {ml_res.get('anomaly_score')})")
+            indicators.append("ml_behavioral_deviation")
+
         # 1. Unusual login / external untrusted IP
-        if event_type in ("login", "authentication") or "login" in action:
+        if event_type in ("login", "authentication", "auth_failure", "auth_success") or "login" in action:
             if src_ip and not SecurityBaseline.is_internal_ip(src_ip):
                 w = self.RULE_WEIGHTS["UNUSUAL_LOGIN"]
                 score += w
@@ -66,7 +83,7 @@ class RiskEngine:
                 reasons.append(f"External login from untrusted IP ({src_ip})")
                 indicators.append("external_ip_login")
 
-            if metadata.get("is_new_location") or "unusual location" in description:
+            if metadata.get("is_new_location") or "unusual location" in description or "unusual ip" in description:
                 if not any(r.rule_id == "RULE-UNUSUAL-LOGIN" for r in triggered_rules):
                     w = self.RULE_WEIGHTS["UNUSUAL_LOGIN"]
                     score += w
@@ -94,7 +111,7 @@ class RiskEngine:
                 indicators.append("unrecognized_device")
 
         # 2. Suspicious process execution
-        if event_type == "process_execution" or "process" in action:
+        if event_type in ("process_execution", "suspicious_command") or "process" in action:
             cmd = metadata.get("command_line", "").lower()
             proc = metadata.get("process_name", "").lower()
             if any(k in cmd or k in proc for k in SecurityBaseline.SUSPICIOUS_PROCESS_KEYWORDS) or "powershell" in description:
@@ -111,7 +128,7 @@ class RiskEngine:
                 indicators.append("encoded_script_execution")
 
         # 3. Credential access
-        if event_type == "credential_access" or "credential" in action or "lsass" in description or "mimikatz" in str(metadata).lower():
+        if event_type in ("credential_access", "privilege_change") or "credential" in action or "lsass" in description or "mimikatz" in str(metadata).lower():
             w = self.RULE_WEIGHTS["CREDENTIAL_ACCESS"]
             score += w
             triggered_rules.append(TriggeredRule(
@@ -139,7 +156,7 @@ class RiskEngine:
             indicators.append("remote_service_creation")
 
         # 5. Sensitive database / file access
-        if event_type in ("file_access", "database_query") or "database" in action or "db-01" in str(dest).lower() or "db-01" in description:
+        if event_type in ("file_access", "database_query", "data_access", "sensitive_resource_access") or "database" in action or "db-01" in str(dest).lower() or "db-01" in description:
             is_sensitive = SecurityBaseline.is_sensitive_target(dest) or "database" in description or "financial" in str(metadata).lower()
             if is_sensitive:
                 w = self.RULE_WEIGHTS["SENSITIVE_DATABASE_ACCESS"]
@@ -154,18 +171,18 @@ class RiskEngine:
                 reasons.append(f"Access to critical database asset ({dest})")
                 indicators.append("sensitive_database_query")
 
-        # 6. Network reconnaissance / discovery
-        if event_type == "network_activity" and ("scan" in action or "enumeration" in str(metadata).lower() or "discovery" in description):
+        # 6. Network reconnaissance / discovery / API rate anomaly
+        if event_type in ("network_activity", "api_access", "rate_anomaly") and ("scan" in action or "enumeration" in str(metadata).lower() or "discovery" in description or "rate" in description):
             w = self.RULE_WEIGHTS["SUSPICIOUS_NETWORK"]
             score += w
             triggered_rules.append(TriggeredRule(
                 rule_id="RULE-NETWORK-RECON",
-                name="Internal Network Reconnaissance",
+                name="Internal Network Reconnaissance / Rate Anomaly",
                 weight=w,
-                reason=f"Internal port probing or SMB share discovery from {device}",
+                reason=f"Internal port probing or API rate burst from {device or src_ip}",
                 evidence_fields={"target": dest, "ports": metadata.get("ports_probed", [])}
             ))
-            reasons.append(f"Internal reconnaissance scan against {dest}")
+            reasons.append(f"Reconnaissance scan / API rate anomaly against {dest}")
             indicators.append("internal_port_scan")
 
         # Clamp single event score to 100
@@ -181,6 +198,7 @@ class RiskEngine:
             suspicious_indicators=indicators,
             is_suspicious=len(triggered_rules) > 0 or final_score >= 30
         )
+
 
     def calculate_contextual_incident_score(self, events: List[Dict[str, Any]]) -> Tuple[int, str, List[str], List[str]]:
         """
@@ -259,13 +277,14 @@ class RiskEngine:
 
         # If it's another combination not matching the exact chain:
         if calculated_score == 0:
-            calculated_score = min(100, len(all_triggered_rule_ids) * 20)
+            calculated_score = min(100, len(all_triggered_rule_ids) * 15)
 
         # Ensure bounds
         final_score = min(100, max(0, calculated_score))
         severity = self.calculate_severity(final_score)
 
         return final_score, severity, list(set(all_reasons)), synergy_explanations
+
 
 
 risk_engine = RiskEngine()
